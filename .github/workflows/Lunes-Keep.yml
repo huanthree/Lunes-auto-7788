@@ -12,7 +12,7 @@ jobs:
     name: 执行保活
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       actions: write
     concurrency:
       group: lunes-keepalive
@@ -55,6 +55,28 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           PROXY_SERVER: ${{ env.PROXY_SERVER }}    # 由 setup_proxy.sh 写入格式:socks5://127.0.0.1:1080
         run: python scripts/Lunes-Keep.py
+
+      - name: 自动更新时间文件（保活仓库）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if [ ! -f time.txt ]; then
+            echo "首次生成时间：$(date +'%Y-%m-%d %H:%M:%S')" > time.txt
+          else
+            echo "$(date +'%Y-%m-%d %H:%M:%S')" > time.txt
+          fi
+
+          git add time.txt
+
+          if git diff --cached --quiet; then
+            echo "无变化，无需提交"
+          else
+            git commit -m "⏱️ 更新时间文件: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin HEAD:main
+          fi
 
 #      - name: 上传截图
 #        uses: actions/upload-artifact@v4
